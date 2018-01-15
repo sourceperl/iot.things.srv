@@ -1,0 +1,92 @@
+#!/usr/bin/env python3
+
+import argparse
+from configparser import ConfigParser
+import datetime
+from hashlib import md5
+from ipaddress import ip_network, ip_address
+from flask import Flask, request, jsonify, json
+from pymongo import MongoClient
+
+# some vars
+# read config
+cnf = ConfigParser()
+cnf.read('/etc/iot.things.srv/global.conf')
+md5_api_key = cnf.get('sigfox', 'md5_api_key')
+# mongo
+db = MongoClient().iot
+
+# some class
+class localFlask(Flask):
+    # force anonymous server name
+    def process_response(self, response):
+        response.headers['server'] = 'HTTP API server'
+        super(localFlask, self).process_response(response)
+        return(response)
+        
+# Flask app
+app = localFlask(__name__)
+
+@app.route('/api/get_datetime')
+def hello():
+    iso_dt = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc).isoformat()
+    return jsonify({'status': 'OK',
+                    'datetime': iso_dt}), 200
+
+@app.route('/api/sigfox/json_msg', methods=['POST'])
+def add_message():
+    # allow only ip from Sigfox CIDR or France Telecom IP2000-ADSL-BAS
+    if ip_address(request.remote_addr) not in ip_network('185.110.97.0/24') and \
+       ip_address(request.remote_addr) not in ip_network('90.47.0.0/16'):
+        return jsonify({'status': 'error',
+                        'message': 'ip address not allowed'}), 403
+    # grab json msg from POST request
+    d_sig_msg = request.get_json(force=False, silent=True)
+    # check grab
+    if d_sig_msg:      
+        # check secret key
+        if d_sig_msg.get('api_key'):
+            b_api_key = str(d_sig_msg['api_key']).encode('utf8')
+            del d_sig_msg['api_key']
+            if not md5(b_api_key).hexdigest() == md5_api_key:
+                return jsonify({'status': 'error',
+                                'message': 'api_key not valid'}), 400                
+        else:
+            return jsonify({'status': 'error',
+                            'message': 'you must provide an api_key'}), 400
+        # check sigfox json mandatory keys
+        for key, fmt in (('thing', str), ('device', str), 
+                         ('time', int), ('data', str)):
+            # key exist
+            if not d_sig_msg.get(key):
+                return jsonify({'status': 'error',
+                                'message': 'key %s is mandatory' % key}), 400
+            # format is ok
+            if type(d_sig_msg.get(key)) is not fmt:
+                return jsonify({'status': 'error',
+                                'message': 'key %s format error' % key}), 400          
+    else:
+        # json
+        return jsonify({'status': 'error',
+                        'message': 'bad json format'}), 400
+    # add to origin msg
+    d_sig_msg['httpWhen'] = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc).isoformat()
+    d_sig_msg['httpFrom'] = request.remote_addr
+    # store message
+    db.sigfox_msg.insert_one(d_sig_msg)
+    # status ok
+    return jsonify({'status': 'OK'}), 200
+
+
+if __name__ == '__main__':
+    # parse argument
+    parser = argparse.ArgumentParser(description='HTTP API server')
+    parser.add_argument('-b', '--bind', type=str, default='0.0.0.0',
+                        help='bind address (default is "0.0.0.0")')
+    parser.add_argument('-p', '--port', type=int, default=8080,
+                        help='listen port')
+    parser.add_argument('-d', '--debug', action='store_true',
+                        help='set debug mode')
+    args = parser.parse_args()
+    # run flask
+    app.run(host=args.bind, port=args.port, debug=args.debug)
