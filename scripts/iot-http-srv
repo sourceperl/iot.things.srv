@@ -23,7 +23,7 @@ class localFlask(Flask):
         response.headers['server'] = 'HTTP API server'
         super(localFlask, self).process_response(response)
         return(response)
-        
+
 # Flask app
 app = localFlask(__name__)
 
@@ -43,19 +43,19 @@ def add_message():
     # grab json msg from POST request
     d_sig_msg = request.get_json(force=False, silent=True)
     # check grab
-    if d_sig_msg:      
+    if d_sig_msg:
         # check secret key
         if d_sig_msg.get('api_key'):
             b_api_key = str(d_sig_msg['api_key']).encode('utf8')
             del d_sig_msg['api_key']
             if not md5(b_api_key).hexdigest() == md5_api_key:
                 return jsonify({'status': 'error',
-                                'message': 'api_key not valid'}), 400                
+                                'message': 'api_key not valid'}), 400
         else:
             return jsonify({'status': 'error',
                             'message': 'you must provide an api_key'}), 400
         # check sigfox json mandatory keys
-        for key, fmt in (('thing', str), ('device', str), 
+        for key, fmt in (('thing', str), ('device', str),
                          ('time', int), ('data', str)):
             # key exist
             if not d_sig_msg.get(key):
@@ -64,7 +64,7 @@ def add_message():
             # format is ok
             if type(d_sig_msg.get(key)) is not fmt:
                 return jsonify({'status': 'error',
-                                'message': 'key %s format error' % key}), 400          
+                                'message': 'key %s format error' % key}), 400
     else:
         # json
         return jsonify({'status': 'error',
@@ -73,7 +73,7 @@ def add_message():
     d_sig_msg['httpWhen'] = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc).isoformat()
     d_sig_msg['httpFrom'] = request.remote_addr
     # store message
-    db.sigfox_msg.insert_one(d_sig_msg)
+    db.sigfox_msg_inbox.insert_one(d_sig_msg)
     # status ok
     return jsonify({'status': 'OK'}), 200
 

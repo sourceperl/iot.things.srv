@@ -11,6 +11,8 @@ setup(
     platforms='any',
     install_requires=required,
     scripts=[
-        'scripts/iot-http-srv'
+        'scripts/iot-http-srv',
+        'scripts/iot-dispatcher-srv',
+        'scripts/iot_check_index'
     ]
 )

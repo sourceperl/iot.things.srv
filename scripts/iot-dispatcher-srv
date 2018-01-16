@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+
+import time
+from bson import ObjectId
+import schedule
+import pymongo
+
+
+# some vars
+db = pymongo.MongoClient().iot
+
+
+# define jobs
+def job_dispatch_sigfox_msg():
+    # check new sigfox message
+    for msg in db.sigfox_msg_inbox.find({'$query': {}, '$orderby': {'time': -1}}).limit(100):
+        # "enless_tx_pulse" device
+        if msg['thing'] == 'enless_tx_pulse':
+            # build pulse data for tx_pulse_raw
+            d_tx = dict(device=msg['device'], time=msg['time'], id_msg=msg['_id'],
+                        pulse_1=msg['customData'].get('Puls_count_1'),
+                        pulse_2=msg['customData'].get('Puls_count_2'))
+            # add raw data if no data already exist for same device at same time
+            db.tx_pulse_raw.update({'device': d_tx['device'], 'time': d_tx['time']}, d_tx, upsert=True, multi=False)
+            # add device status if not exist
+            db.tx_pulse_status.update({'device': msg['device']}, dict(device=msg['device']), upsert=True, multi=False)
+        elif msg['thing'] == 'another_thing':
+            # do anything here
+            pass
+        # this msg is read, we move it to "read" box
+        try:
+            db.sigfox_msg_read.insert_one(msg)
+        except pymongo.errors.DuplicateKeyError:
+            pass
+        except pymongo.errors.PyMongoError:
+            continue
+        # on move ok: remove from "inbox"
+        db.sigfox_msg_inbox.delete_one({'_id': ObjectId(msg['_id'])})
+
+
+
+# schedule all jobs
+schedule.every(1).minute.do(job_dispatch_sigfox_msg)
+# first run
+job_dispatch_sigfox_msg()
+
+# main loop
+while True:
+    schedule.run_pending()
+    time.sleep(1)
