@@ -21,7 +21,7 @@ args = parser.parse_args()
 
 # build query
 d_query = dict()
-d_query['device'] = args.device
+d_query['device'] = args.device.upper()
 _record = None
 
 # list and print all record(s)
@@ -36,4 +36,6 @@ for record in db.tx_pulse_raw.find({'$query': d_query, '$orderby': {'time': -1}}
     dp1 = record['pulse_1'] - _record['pulse_1']
     dp2 = record['pulse_2'] - _record['pulse_2']
     # print current record
-    print('%s   Vm = %10i (inc %4i)   Vb = %10s (inc %4i)' % (utc_dt.astimezone(LOCAL_TZ), p1, dp1, p2, dp2))
+    print('%s   Vm = %10i (inc %6i)   Vb = %10s (inc %6i)' % (utc_dt.astimezone(LOCAL_TZ), p1, dp1, p2, dp2))
+    # for next loop
+    _record = record
