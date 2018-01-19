@@ -13,8 +13,8 @@ LOCAL_TZ = pytz.timezone('Europe/Paris')
 # init mongo
 db = MongoClient().iot
 # define index
-db.tx_pulse_raw.create_index('time')
-db.tx_pulse_hourly.create_index('when')
+db.tx_pulse_raw.create_index('msg_time')
+db.tx_pulse_hourly.create_index('dt')
 
 def job_hourly_data():
     # for each device

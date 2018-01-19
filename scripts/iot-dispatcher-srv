@@ -21,14 +21,23 @@ def job_dispatch_sigfox_msg():
         msg_dt = datetime.datetime.fromtimestamp(msg['time'], tz=datetime.timezone.utc)
         # "enless_tx_pulse" device
         if msg['thing'] == 'enless_tx_pulse':
-            # build pulse data for tx_pulse_raw
-            d_tx = dict(device=msg['device'], msg_time=msg_dt, msg_id=msg['_id'],
-                        pulse_1=msg['customData'].get('Puls_count_1'),
-                        pulse_2=msg['customData'].get('Puls_count_2'))
-            # add raw data if no data already exist for same device at same time
-            db.tx_pulse_raw.update({'device': d_tx['device'], 'msg_time': d_tx['msg_time']}, d_tx, upsert=True, multi=False)
-            # add device status if not exist
-            db.tx_pulse_devices.update({'device': msg['device']}, dict(device=msg['device']), upsert=True, multi=False)
+            # decode customData
+            d_c_data = msg.get('customData', {})
+            # is pulse transmit msg ?
+            if d_c_data.get('Device_type') == 0x04:
+                # build pulse data for tx_pulse_raw
+                d_tx = dict(device=msg['device'], msg_time=msg_dt, msg_id=msg['_id'],
+                            pulse_1=d_c_data.get('Puls_count_1'),
+                            pulse_2=d_c_data.get('Puls_count_2'))
+                # add raw data if no data already exist for same device at same time
+                db.tx_pulse_raw.update({'device': d_tx['device'], 'msg_time': d_tx['msg_time']}, d_tx, upsert=True, multi=False)
+                # update device status
+                fv_b_status = d_c_data.get('Firmware_Version_Battery_status_byte', 0x00)
+                battery_ok = bool(fv_b_status and 0x01)
+                firmware_version = fv_b_status >> 4
+                db.tx_pulse_devices.update({'device': msg['device']},
+                                           dict(device=msg['device'], batt_ok=battery_ok, f_version=firmware_version),
+                                           upsert=True, multi=False)
         elif msg['thing'] == 'another_thing':
             # do anything here
             pass
