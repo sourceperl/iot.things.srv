@@ -70,7 +70,7 @@ def add_message():
         return jsonify({'status': 'error',
                         'message': 'bad json format'}), 400
     # add to origin msg
-    d_sig_msg['httpWhen'] = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc).isoformat()
+    d_sig_msg['httpWhen'] = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
     d_sig_msg['httpFrom'] = request.remote_addr
     # store message
     db.sigfox_msg_inbox.insert_one(d_sig_msg)

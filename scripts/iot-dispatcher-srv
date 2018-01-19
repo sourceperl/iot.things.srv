@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import datetime
 import time
 from bson import ObjectId
 import schedule
@@ -8,22 +9,24 @@ import pymongo
 
 # some vars
 db = pymongo.MongoClient().iot
-# define index
-db.sigfox_msg_inbox.create_index('time')
+# add TTL for read msg (ttl = 1 year after http receive)
+db.sigfox_msg_read.create_index('httpWhen', expireAfterSeconds=3600*24*365)
 
 
 # define jobs
 def job_dispatch_sigfox_msg():
     # check new sigfox message
     for msg in db.sigfox_msg_inbox.find({'$query': {}, '$orderby': {'time': -1}}).limit(100):
+        # convert message timestamp
+        msg_dt = datetime.datetime.fromtimestamp(msg['time'], tz=datetime.timezone.utc)
         # "enless_tx_pulse" device
         if msg['thing'] == 'enless_tx_pulse':
             # build pulse data for tx_pulse_raw
-            d_tx = dict(device=msg['device'], time=msg['time'], id_msg=msg['_id'],
+            d_tx = dict(device=msg['device'], msg_time=msg_dt, msg_id=msg['_id'],
                         pulse_1=msg['customData'].get('Puls_count_1'),
                         pulse_2=msg['customData'].get('Puls_count_2'))
             # add raw data if no data already exist for same device at same time
-            db.tx_pulse_raw.update({'device': d_tx['device'], 'time': d_tx['time']}, d_tx, upsert=True, multi=False)
+            db.tx_pulse_raw.update({'device': d_tx['device'], 'msg_time': d_tx['msg_time']}, d_tx, upsert=True, multi=False)
             # add device status if not exist
             db.tx_pulse_devices.update({'device': msg['device']}, dict(device=msg['device']), upsert=True, multi=False)
         elif msg['thing'] == 'another_thing':

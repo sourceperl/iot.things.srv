@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import datetime
 import time
 import schedule
 import pandas as pd
@@ -24,15 +23,15 @@ def job_hourly_data():
         dev_id = row_device['device']
         # populate a dataframe with last 100 records
         df = pd.DataFrame(None, columns=['p1', 'p2'], dtype='float')
-        for record in db.tx_pulse_raw.find({'$query': {'device': dev_id}, '$orderby': {'time': -1}}).limit(100):
-            df.loc[pd.to_datetime(datetime.datetime.fromtimestamp(record['time'], tz=pytz.utc))] = [record['pulse_1'], record['pulse_2']]
+        for record in db.tx_pulse_raw.find({'$query': {'device': dev_id}, '$orderby': {'msg_time': -1}}).limit(100):
+            df.loc[pd.to_datetime(record['msg_time'])] = [record['pulse_1'], record['pulse_2']]
         # convert index to hourly volume
         df = df.sort_index(ascending=True).resample('H', how=np.max).interpolate().diff()
         # populate hourly volume collection
         for index, row in df.iterrows():
-            d_h_row = dict(device=dev_id, when=index, vm=round(row['p1']), vc=round(row['p2']))
+            d_h_row = dict(device=dev_id, dt=index, vm=round(row['p1']), vc=round(row['p2']))
             # add raw data if no data already exist for same device at same time
-            db.tx_pulse_hourly.update({'device': d_h_row['device'], 'when': d_h_row['when']}, d_h_row, upsert=True, multi=False)
+            db.tx_pulse_hourly.update({'device': d_h_row['device'], 'dt': d_h_row['dt']}, d_h_row, upsert=True, multi=False)
 
 # schedule all jobs
 schedule.every(5).minutes.do(job_hourly_data)
