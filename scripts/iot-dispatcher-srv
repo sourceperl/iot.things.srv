@@ -8,6 +8,8 @@ import pymongo
 
 # some vars
 db = pymongo.MongoClient().iot
+# define index
+db.sigfox_msg_inbox.create_index('time')
 
 
 # define jobs
@@ -23,7 +25,7 @@ def job_dispatch_sigfox_msg():
             # add raw data if no data already exist for same device at same time
             db.tx_pulse_raw.update({'device': d_tx['device'], 'time': d_tx['time']}, d_tx, upsert=True, multi=False)
             # add device status if not exist
-            db.tx_pulse_status.update({'device': msg['device']}, dict(device=msg['device']), upsert=True, multi=False)
+            db.tx_pulse_devices.update({'device': msg['device']}, dict(device=msg['device']), upsert=True, multi=False)
         elif msg['thing'] == 'another_thing':
             # do anything here
             pass
