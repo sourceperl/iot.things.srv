@@ -10,18 +10,17 @@ def job_mongodump():
     # do mongo dump to today directory
     dump_status = os.system('mongodump --db iot --out /var/backups/mongodb/%s' % backup_name)
     # tar/gz today directory
-    tar_status = os.system('tar cvzf /var/backups/mongodb/%s.tar.gz /var/backups/mongodb/%s' % (backup_name, backup_name))
+    tar_status = os.system('tar cvzf /var/backups/mongodb/%s.tar.gz -C /var/backups/mongodb %s' % (backup_name, backup_name))
     # if dump and tar success
     if dump_status == 0 and tar_status == 0:
         # remove today directory
         os.system('rm -rf /var/backups/mongodb/%s' % backup_name)
         # remove old(s) backup(s)
-        #os.system('rm -rf /var/backups/mongodb/iot_*.tar.gz' % backup_name)
+        # add cmd here
 
 
 # setup shedule
 schedule.every().day.at('08:00').do(job_mongodump)
-job_mongodump()
 
 # main loop
 while True:
