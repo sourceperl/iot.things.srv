@@ -14,6 +14,7 @@ setup(
         'scripts/iot-http-srv',
         'scripts/iot-dispatcher-srv',
         'scripts/iot-tx-pulse-srv',
+        'scripts/iot-mongodump-srv',
         'scripts/iot_check_index'
     ]
 )
