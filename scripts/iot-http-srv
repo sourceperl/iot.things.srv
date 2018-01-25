@@ -34,7 +34,7 @@ def hello():
                     'datetime': iso_dt}), 200
 
 @app.route('/api/sigfox/json_msg', methods=['POST'])
-def add_message():
+def add_sigfox_message():
     # allow only ip from Sigfox CIDR or France Telecom IP2000-ADSL-BAS
     if ip_address(request.remote_addr) not in ip_network('185.110.97.0/24') and \
        ip_address(request.remote_addr) not in ip_network('90.47.0.0/16'):
@@ -74,6 +74,50 @@ def add_message():
     d_sig_msg['httpFrom'] = request.remote_addr
     # store message
     db.sigfox_msg_inbox.insert_one(d_sig_msg)
+    # status ok
+    return jsonify({'status': 'OK'}), 200
+
+@app.route('/api/sigfox/json_service', methods=['POST'])
+def add_sigfox_service():
+    # allow only ip from Sigfox CIDR or France Telecom IP2000-ADSL-BAS
+    if ip_address(request.remote_addr) not in ip_network('185.110.97.0/24') and \
+       ip_address(request.remote_addr) not in ip_network('90.47.0.0/16'):
+        return jsonify({'status': 'error',
+                        'message': 'ip address not allowed'}), 403
+    # grab json msg from POST request
+    d_sig_svc = request.get_json(force=False, silent=True)
+    # check grab
+    if d_sig_svc:
+        # check secret key
+        if d_sig_svc.get('api_key'):
+            b_api_key = str(d_sig_svc['api_key']).encode('utf8')
+            del d_sig_svc['api_key']
+            if not md5(b_api_key).hexdigest() == md5_api_key:
+                return jsonify({'status': 'error',
+                                'message': 'api_key not valid'}), 400
+        else:
+            return jsonify({'status': 'error',
+                            'message': 'you must provide an api_key'}), 400
+        # check sigfox json mandatory keys
+        for key, fmt in (('thing', str), ('device', str),
+                         ('time', int)):
+            # key exist
+            if not d_sig_svc.get(key):
+                return jsonify({'status': 'error',
+                                'message': 'key %s is mandatory' % key}), 400
+            # format is ok
+            if type(d_sig_svc.get(key)) is not fmt:
+                return jsonify({'status': 'error',
+                                'message': 'key %s format error' % key}), 400
+    else:
+        # json
+        return jsonify({'status': 'error',
+                        'message': 'bad json format'}), 400
+    # add to origin msg
+    d_sig_svc['httpWhen'] = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+    d_sig_svc['httpFrom'] = request.remote_addr
+    # store message
+    db.sigfox_svc_inbox.insert_one(d_sig_svc)
     # status ok
     return jsonify({'status': 'OK'}), 200
 
