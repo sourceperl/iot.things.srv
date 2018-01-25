@@ -20,7 +20,7 @@ def job_mongodump():
 
 
 # setup shedule
-schedule.every().day.at('08:00').do(job_mongodump)
+schedule.every().day.at('02:00').do(job_mongodump)
 
 # main loop
 while True:
