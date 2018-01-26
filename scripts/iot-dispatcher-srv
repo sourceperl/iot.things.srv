@@ -27,21 +27,21 @@ def job_dispatch_sigfox_msg():
             # is pulse transmit msg ?
             if d_c_data.get('Device_type') == 0x04:
                 # build pulse data for tx_pulse_raw
-                d_tx = {'device': msg['device'], 'msg_time': msg_dt, 'msg_id': msg['_id'],
+                d_tx = {'device_id': msg['device'], 'msg_time': msg_dt, 'msg_id': msg['_id'],
                         'pulse_1': d_c_data.get('Puls_count_1'),
                         'pulse_2': d_c_data.get('Puls_count_2')}
                 # add raw data if no data already exist for same device at same time
-                db.tx_pulse_raw.update({'device_id': d_tx['device'], 'msg_time': d_tx['msg_time']}, d_tx, upsert=True, multi=False)
+                db.tx_pulse_raw.update({'device_id': d_tx['device_id'], 'msg_time': d_tx['msg_time']}, d_tx, upsert=True, multi=False)
                 # update device status
                 fv_b_status = d_c_data.get('Firmware_Version_Battery_status_byte', 0x00)
                 battery_ok = bool(fv_b_status and 0x01)
                 firmware_version = fv_b_status >> 4
-                db.devices.update({'device_id': msg['device']},
+                db.devices.update({'device_id': d_tx['device_id']},
                                   {'$set': {'network': 'sigfox', 'thing': 'tx_pulse', 'device_id': msg['device'], 
                                             'batt_ok': battery_ok, 'f_version': firmware_version}},
                                   upsert=True, multi=False)
                 # ensure last_msg datetime have the higher one
-                db.devices.update({'device_id':  msg['device'],
+                db.devices.update({'device_id': d_tx['device_id'],
                                    '$or': [{'last_msg': {'$exists': False}}, {'last_msg': {'$lt': msg_dt}}]},
                                   {'$set': {'last_msg': msg_dt}})
         elif msg['thing'] == 'another_thing':
