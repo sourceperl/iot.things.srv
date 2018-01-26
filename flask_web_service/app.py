@@ -18,7 +18,7 @@ db = MongoClient().iot
 class localFlask(Flask):
     # force anonymous server name
     def process_response(self, response):
-        response.headers['server'] = 'HTTP client server'
+        response.headers['server'] = 'ThingView server'
         super(localFlask, self).process_response(response)
         return(response)
 
@@ -63,7 +63,7 @@ app.jinja_env.filters['datetimefilter'] = datetimefilter
 @requires_auth
 def dashboard(board='list'):
     if board == 'list':
-        l_dev = db.tx_pulse_devices.find()
+        l_dev = db.devices.find()
         return render_template('dashboard.html', board='list', devices=l_dev)
     else:
         return render_template('dashboard.html', board=board)

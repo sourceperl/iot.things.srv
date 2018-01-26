@@ -10,7 +10,8 @@ import pymongo
 # some vars
 db = pymongo.MongoClient().iot
 # add TTL for read msg (ttl = 1 year after http receive)
-db.sigfox_msg_read.create_index('httpWhen', expireAfterSeconds=3600*24*365)
+db.sigfox_msg_hist.create_index('httpWhen', expireAfterSeconds=3600*24*365)
+db.sigfox_geoloc_hist.create_index('httpWhen', expireAfterSeconds=3600*24*7)
 
 
 # define jobs
@@ -30,24 +31,25 @@ def job_dispatch_sigfox_msg():
                         'pulse_1': d_c_data.get('Puls_count_1'),
                         'pulse_2': d_c_data.get('Puls_count_2')}
                 # add raw data if no data already exist for same device at same time
-                db.tx_pulse_raw.update({'device': d_tx['device'], 'msg_time': d_tx['msg_time']}, d_tx, upsert=True, multi=False)
+                db.tx_pulse_raw.update({'device_id': d_tx['device'], 'msg_time': d_tx['msg_time']}, d_tx, upsert=True, multi=False)
                 # update device status
                 fv_b_status = d_c_data.get('Firmware_Version_Battery_status_byte', 0x00)
                 battery_ok = bool(fv_b_status and 0x01)
                 firmware_version = fv_b_status >> 4
-                db.tx_pulse_devices.update({'device': msg['device']},
-                                           {'$set': {'device': msg['device'], 'batt_ok': battery_ok, 'f_version': firmware_version}},
-                                           upsert=True, multi=False)
+                db.devices.update({'device_id': msg['device']},
+                                  {'$set': {'network': 'sigfox', 'thing': 'tx_pulse', 'device_id': msg['device'], 
+                                            'batt_ok': battery_ok, 'f_version': firmware_version}},
+                                  upsert=True, multi=False)
                 # ensure last_msg datetime have the higher one
-                db.tx_pulse_devices.update({'device':  msg['device'],
-                                            '$or': [{'last_msg': {'$exists': False}}, {'last_msg': {'$lt': msg_dt}}]},
-                                           {'$set': {'last_msg': msg_dt}})
+                db.devices.update({'device_id':  msg['device'],
+                                   '$or': [{'last_msg': {'$exists': False}}, {'last_msg': {'$lt': msg_dt}}]},
+                                  {'$set': {'last_msg': msg_dt}})
         elif msg['thing'] == 'another_thing':
             # do anything here
             pass
         # this msg is read, we move it to "read" box
         try:
-            db.sigfox_msg_read.insert_one(msg)
+            db.sigfox_msg_hist.insert_one(msg)
         except pymongo.errors.DuplicateKeyError:
             pass
         except pymongo.errors.PyMongoError:
@@ -57,10 +59,39 @@ def job_dispatch_sigfox_msg():
 
 
 
+def job_dispatch_sigfox_geoloc():
+    # check new sigfox message
+    for msg in db.sigfox_geoloc_inbox.find({'$query': {}, '$orderby': {'time': 1}}).limit(100):
+        # convert message timestamp
+        msg_dt = datetime.datetime.fromtimestamp(msg.get('time', 0), tz=datetime.timezone.utc)
+        # update device position
+        delta_age = datetime.datetime.now(tz=datetime.timezone.utc) - msg_dt
+        radius = msg.get('radius', 0)
+        lat = msg.get('lat', 0.0)
+        lng = msg.get('lng', 0.0)
+        # check data are not too old
+        if delta_age.total_seconds() < 7200:
+            db.devices.update({'device_id': msg['device']},
+                              {'$set': {'network': 'sigfox', 'device_id': msg['device'], 
+                                        'lat': lat, 'lng': lng}},
+                              upsert=True, multi=False)
+        # this msg is read, we move it to "read" box
+        try:
+            db.sigfox_geoloc_hist.insert_one(msg)
+        except pymongo.errors.DuplicateKeyError:
+            pass
+        except pymongo.errors.PyMongoError:
+            continue
+        # on move ok: remove from "inbox"
+        db.sigfox_geoloc_inbox.delete_one({'_id': ObjectId(msg['_id'])})
+
+
 # schedule all jobs
 schedule.every(1).minute.do(job_dispatch_sigfox_msg)
+schedule.every(1).minute.do(job_dispatch_sigfox_geoloc)
 # first run
 job_dispatch_sigfox_msg()
+job_dispatch_sigfox_geoloc()
 
 # main loop
 while True:

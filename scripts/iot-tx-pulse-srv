@@ -17,21 +17,21 @@ db.tx_pulse_raw.create_index('msg_time')
 db.tx_pulse_hourly.create_index('dt')
 
 def job_hourly_data():
-    # for each device
-    for row_device in db.tx_pulse_devices.find():
+    # for each tx_pulse device
+    for row_device in db.devices.find({'$query': {'network': 'sigfox', 'thing': 'tx_pulse'}}):
         # extract row data
-        dev_id = row_device['device']
+        dev_id = row_device['device_id']
         # populate a dataframe with last 100 records
         df = pd.DataFrame(None, columns=['p1', 'p2'], dtype='float')
-        for record in db.tx_pulse_raw.find({'$query': {'device': dev_id}, '$orderby': {'msg_time': -1}}).limit(100):
+        for record in db.tx_pulse_raw.find({'$query': {'device_id': dev_id}, '$orderby': {'msg_time': -1}}).limit(100):
             df.loc[pd.to_datetime(record['msg_time'])] = [record['pulse_1'], record['pulse_2']]
         # convert index to hourly volume
         df = df.sort_index(ascending=True).resample('H', how=np.max).interpolate().diff()
         # populate hourly volume collection
         for index, row in df.iterrows():
-            d_h_row = dict(device=dev_id, dt=index, vm=round(row['p1']), vc=round(row['p2']))
+            d_h_row = dict(device_id=dev_id, dt=index, vm=round(row['p1']), vc=round(row['p2']))
             # add raw data if no data already exist for same device at same time
-            db.tx_pulse_hourly.update({'device': d_h_row['device'], 'dt': d_h_row['dt']}, d_h_row, upsert=True, multi=False)
+            db.tx_pulse_hourly.update({'device_id': d_h_row['device_id'], 'dt': d_h_row['dt']}, d_h_row, upsert=True, multi=False)
 
 # schedule all jobs
 schedule.every(5).minutes.do(job_hourly_data)
