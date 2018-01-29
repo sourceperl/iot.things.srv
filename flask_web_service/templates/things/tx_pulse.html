@@ -1,28 +1,68 @@
 {% extends "base.html" %}
 
 {% block content %}
-<main role="main" class="col-md-9 ml-sm-auto col-lg-10 pt-3 px-4">
-  <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
-    <div class="h2">Données du device</div>
-    <div class="h2 flex-row-reverse">{{ device.name }} ({{ device.device_id }})</div>
-  </div>
-  <div class="d-flex">
-    <div class="p-2">Derniers index bruts reçus</div>
-  </div>
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+  <div class="h2">Données du device</div>
+  <div class="h2 flex-row-reverse">{{ device.name }} ({{ device.device_id }})</div>
+</div>
+
+<div class="values-box">
+  <h4>Derniers index reçus</h4>
   <div class="table-responsive">
-    {{ df_raw.to_html(classes="table table-striped table-sm text-center") | safe}}
+    <table class="table table-striped table-sm text-center">
+      <tr>
+        <th width="50%">Date et heure de réception</th>
+        <th width="25%">Index brut</th>
+        <th width="25%">Index corrigé</th>
+      </tr>
+      {% for index, item in df_raw.iterrows() %}
+      <tr>
+        <td>{{ index }}</td>
+        <td>{{ item.vm | int }}</td>
+        <td>{{ item.vc | int }}</td>
+      </tr>
+      {% endfor %}
+    </table>
   </div>
-  <div class="d-flex">
-    <div class="p-2">Données journalières sur 7j</div>
-  </div>
+</div>
+
+<div class="values-box">
+  <h4>Données journalières (derniers 7 jours)</h4>
   <div class="table-responsive">
-    {{ df_j.to_html(classes="table table-striped table-sm text-center") | safe}}
+    <table class="table table-striped table-sm text-center">
+      <tr>
+        <th width="50%">Journée</th>
+        <th width="25%">Volume brut</th>
+        <th width="25%">Volume corrigé</th>
+      </tr>
+      {% for index, item in df_j.iterrows() %}
+      <tr>
+        <td>{{ index }}</td>
+        <td>{{ item.vm | int }}</td>
+        <td>{{ item.vc | int }}</td>
+      </tr>
+      {% endfor %}
+      </table>
   </div>
-  <div class="d-flex">
-    <div class="p-2">Données horaires sur 24h</div>
-  </div>
+</div>
+
+<div class="values-box">
+  <h4>Données horaires (dernières 24h)</h4>
   <div class="table-responsive">
-    {{ df_h.to_html(classes="table table-striped table-sm text-center") | safe}}
+    <table class="table table-striped table-sm text-center">
+      <tr>
+        <th width="50%">Heure</th>
+        <th width="25%">Volume brut</th>
+        <th width="25%">Volume corrigé</th>
+      </tr>
+      {% for index, item in df_h.iterrows() %}
+      <tr>
+        <td>{{ index }}</td>
+        <td>{{ item.vm | int }}</td>
+        <td>{{ item.vc | int }}</td>
+      </tr>
+      {% endfor %}
+      </table>
   </div>
-</main>
+</div>
 {% endblock %}

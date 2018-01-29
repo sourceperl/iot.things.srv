@@ -4,7 +4,7 @@
 import datetime
 import os
 from functools import wraps
-from flask import Flask, make_response, redirect, request, render_template, url_for, Response
+from flask import Flask, make_response, redirect, request, render_template, url_for, Response, g
 from pymongo import MongoClient
 import pandas as pd
 import numpy as np
@@ -27,26 +27,32 @@ class localFlask(Flask):
 
 
 # some functions
-def check_auth(username, password):
-    """This function is called to check if a username /
-    password combination is valid.
-    """
-    return username == 'admin' and password == 'secret'
+def get_user_lvl(username, password):
+    # get user access level (0: no auth, 1-3:valid)
+    u_info = db.users.find_one({'$query': {'user': username, 'pwd': password}})
+    if u_info:
+        return u_info['level']
+    else:
+        return 0
 
 def authenticate():
-    """Sends a 401 response that enables basic auth"""
-    return Response(
-    'Could not verify your access level for that URL.\n'
-    'You have to login with proper credentials', 401,
-    {'WWW-Authenticate': 'Basic realm="Login Required"'})
+    return Response('You have to login with proper credentials', 401, {'WWW-Authenticate': 'Basic realm="Login Required"'})
 
 def requires_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
+        # check auth (if exist)
         auth = request.authorization
-        if not auth or not check_auth(auth.username, auth.password):
+        if auth:
+            g.user_lvl = get_user_lvl(auth.username, auth.password)
+        else:
+            g.user_lvl = 0
+        # check user level (0: no auth, 1-3:valid)
+        if g.user_lvl in [1,2,3] :
+            g.is_admin = g.user_lvl == 3
+            return f(*args, **kwargs)
+        else:
             return authenticate()
-        return f(*args, **kwargs)
     return decorated
 
 def datetimefilter(dt, fmt='%Y-%m-%d %H:%M:%S'):
@@ -63,6 +69,10 @@ app.jinja_env.filters['datetimefilter'] = datetimefilter
 @requires_auth
 def root():
     return redirect(url_for('devices'))
+
+@app.route('/logout')
+def logout():
+    return Response('things to do here')
 
 @app.route('/devices')
 @requires_auth
@@ -100,5 +110,7 @@ if __name__ == '__main__':
                 filename = os.path.join(dirname, filename)
                 if os.path.isfile(filename):
                     extra_files.append(filename)
+    # define SSL
+    ssl_ctx = ('ssl.cert', 'ssl.key')
     # start flask with auto-reload
-    app.run(host='0.0.0.0', port=8080, extra_files=extra_files, debug=True)
+    app.run(host='0.0.0.0', port=8080, ssl_context=ssl_ctx, extra_files=extra_files, debug=True)
