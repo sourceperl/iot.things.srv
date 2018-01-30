@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import argparse
 import datetime
 import os
 from functools import wraps
-from flask import Flask, make_response, redirect, request, render_template, url_for, Response, g
+from flask import Flask, flash, redirect, request, render_template, session, url_for, Response, g
 from pymongo import MongoClient
 import pandas as pd
 import numpy as np
@@ -41,18 +42,13 @@ def authenticate():
 def requires_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        # check auth (if exist)
-        auth = request.authorization
-        if auth:
-            g.user_lvl = get_user_lvl(auth.username, auth.password)
-        else:
-            g.user_lvl = 0
+        # check admin
+        g.is_admin = session.get('user_lvl') == 3
         # check user level (0: no auth, 1-3:valid)
-        if g.user_lvl in [1,2,3] :
-            g.is_admin = g.user_lvl == 3
+        if session.get('user_lvl') in [1,2,3] :
             return f(*args, **kwargs)
         else:
-            return authenticate()
+            return render_template('login.html')
     return decorated
 
 def datetimefilter(dt, fmt='%Y-%m-%d %H:%M:%S'):
@@ -65,14 +61,37 @@ app = localFlask(__name__)
 app.jinja_env.filters['datetimefilter'] = datetimefilter
 
 
+@app.route('/login', methods=['POST'])
+def login():
+    # get user level
+    session['user_lvl'] = get_user_lvl(request.form['username'],
+                                       request.form['password'])
+    # check valid user level
+    if session['user_lvl'] in [1,2,3]:
+        session['username'] = request.form['username']
+    else:
+        session['username'] = ''
+    return root()
+
+@app.route('/logout')
+def logout():
+    session['user_lvl'] = 0
+    return redirect('/')
+
 @app.route('/')
 @requires_auth
 def root():
     return redirect(url_for('devices'))
 
-@app.route('/logout')
-def logout():
-    return Response('things to do here')
+@app.route('/user')
+@requires_auth
+def user():
+    return render_template('user.html')
+
+@app.route('/test')
+@requires_auth
+def test():
+    return render_template('test.html')
 
 @app.route('/devices')
 @requires_auth
@@ -96,11 +115,22 @@ def thing_tx_pulse(device_id):
     df_h = df_raw.resample('H', closed='left', label='left', how=np.max).interpolate().diff()
     df_j = df_h.resample(rule='24H', closed='left', label='left', base=6, how=np.sum)
     # web render
-    return render_template('things/tx_pulse.html', device=device, 
+    return render_template('things/tx_pulse.html', device=device,
                            df_raw=df_raw[:3], df_h=df_h.sort(ascending=False)[:24], df_j=df_j.sort(ascending=False)[:7])
 
 
 if __name__ == '__main__':
+    # parse argument
+    parser = argparse.ArgumentParser(description='ThingView server')
+    parser.add_argument('-b', '--bind', type=str, default='0.0.0.0',
+                        help='bind address (default is "0.0.0.0")')
+    parser.add_argument('-p', '--port', type=int, default=8080,
+                        help='listen port')
+    parser.add_argument('-k', '--secret-key', type=str, default=os.urandom(12),
+                        help='secret key')
+    parser.add_argument('-d', '--debug', action='store_true',
+                        help='set debug mode')
+    args = parser.parse_args()
     # auto-reload when templates dir is update
     extra_dirs = ['templates',]
     extra_files = extra_dirs[:]
@@ -110,7 +140,9 @@ if __name__ == '__main__':
                 filename = os.path.join(dirname, filename)
                 if os.path.isfile(filename):
                     extra_files.append(filename)
+    # define secret key for session
+    app.secret_key = args.secret_key
     # define SSL
     ssl_ctx = ('ssl.cert', 'ssl.key')
     # start flask with auto-reload
-    app.run(host='0.0.0.0', port=8080, ssl_context=ssl_ctx, extra_files=extra_files, debug=True)
+    app.run(host=args.bind, port=args.port, ssl_context=ssl_ctx, extra_files=extra_files, debug=True)

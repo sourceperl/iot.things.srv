@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container col-sm-6 col-sm offset-3">
+  <form class="form-horizontal" method="POST" action="/login">
+    <h2 class="form-signin-heading">Se connecter</h2>
+    <br>
+    <div class="form-group">
+      <label for="user_name">Utilisateur</label>
+      <input class="form-control" type="text" id="user_name" maxlength="32" name="username" required autofocus>
+    </div>
+    <div class="form-group">
+      <label for="user_password">Mot de passe</label>
+      <input class="form-control" type="password" id="user_password" maxlength="16" name="password" required>
+    </div>
+    <button class="btn btn-lg btn-primary btn-block" type="submit">Valider</button>
+  </form>
+</div>
+{% endblock %}
