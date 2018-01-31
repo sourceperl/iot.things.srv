@@ -10,6 +10,7 @@ from pymongo import MongoClient
 import pandas as pd
 import numpy as np
 import pytz
+from forms import LoginForm, UpdatePwdForm, CnfDeviceForm
 
 # some const
 LOCAL_TZ = pytz.timezone('Europe/Paris')
@@ -36,9 +37,6 @@ def get_user_lvl(username, password):
     else:
         return 0
 
-def authenticate():
-    return Response('You have to login with proper credentials', 401, {'WWW-Authenticate': 'Basic realm="Login Required"'})
-
 def requires_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -48,9 +46,20 @@ def requires_auth(f):
         if session.get('user_lvl') in [1,2,3] :
             return f(*args, **kwargs)
         else:
-            return render_template('login.html')
+            session['username'] = ''
+            return redirect(url_for('login'))
     return decorated
 
+def requires_admin(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        # check admin
+        if g.is_admin:
+          return f(*args, **kwargs)
+        else:
+          return redirect(url_for('login'))
+    return decorated
+    
 def datetimefilter(dt, fmt='%Y-%m-%d %H:%M:%S'):
     utc_dt = pytz.utc.localize(dt)
     return utc_dt.astimezone(LOCAL_TZ).strftime(fmt)
@@ -61,43 +70,66 @@ app = localFlask(__name__)
 app.jinja_env.filters['datetimefilter'] = datetimefilter
 
 
-@app.route('/login', methods=['POST'])
+@app.route('/login', methods=['GET', 'POST'])
 def login():
-    # get user level
-    session['user_lvl'] = get_user_lvl(request.form['username'],
-                                       request.form['password'])
-    # check valid user level
-    if session['user_lvl'] in [1,2,3]:
-        session['username'] = request.form['username']
-    else:
-        session['username'] = ''
-    return root()
+    form = LoginForm()
+    error = None
+    if form.validate_on_submit():
+      # get user level
+      session['user_lvl'] = get_user_lvl(form.username.data,
+                                         form.password.data)
+      # check valid user level
+      if session['user_lvl'] in [1,2,3]:
+          session['username'] = form.username.data
+          return redirect(url_for('root'))
+      else:
+        error = 'Votre nom d\'utilisateur ou votre mot de passe est invalide.'
+    return render_template('login.html', form=form, error=error)
 
 @app.route('/logout')
+@requires_auth
 def logout():
     session['user_lvl'] = 0
-    return redirect('/')
+    return redirect(url_for('root'))
 
 @app.route('/')
 @requires_auth
 def root():
     return redirect(url_for('devices'))
 
-@app.route('/user')
+@app.route('/update_pwd', methods=['GET', 'POST'])
 @requires_auth
 def user():
-    return render_template('user.html')
-
-@app.route('/test')
-@requires_auth
-def test():
-    return render_template('test.html')
+    form = UpdatePwdForm()
+    success = None
+    error = None
+    if form.validate_on_submit():
+        # get user level
+        if form.password_1.data == form.password_2.data:
+            success = 'mot de passe mis à jour.'
+        else:
+            error = 'les mots de passe sont différents.'
+    return render_template('update_pwd.html', form=form, success=success, error=error)
 
 @app.route('/devices')
 @requires_auth
 def devices():
     l_dev = db.devices.find()
     return render_template('devices.html', devices=l_dev)
+
+@app.route('/cnf_device/<string:device_id>', methods=['GET', 'POST'])
+@requires_auth
+@requires_admin
+def cnf_device(device_id):
+    dev = db.devices.find_one({'$query': {'device_id': device_id}})
+    form = CnfDeviceForm()
+    success = None
+    error = None
+    if form.validate_on_submit():
+        # get user level
+        if form.name.data == dev['name']:
+            success = 'nouveau nom %s' % form.name.data
+    return render_template('cnf_device.html', form=form, dev=dev, success=success, error=error)
 
 @app.route('/things/tx_pulse/<string:device_id>')
 @requires_auth

@@ -48,7 +48,7 @@
       <td class="align-middle">{{ device.f_version }}</td>
       <td class="align-middle"><a href="http://www.openstreetmap.org/?mlat={{ device.lat }}&mlon={{ device.lng }}&zoom=10" target="_blank">{{ device.lat|round(4) }}, {{ device.lng|round(4) }}</a></td>
       {% if g.is_admin %}
-      <td class="align-middle"><a href="/"><span data-feather="settings"></span></a></td>
+      <td class="align-middle"><a href="/cnf_device/{{ device.device_id }}"><span data-feather="settings"></span></a></td>
       {% endif %}
     </tr>
     {% endfor %}

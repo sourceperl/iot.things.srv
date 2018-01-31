@@ -20,21 +20,31 @@
     }
     </style>
   </head>
-
   <body class="blue-background">
     <!-- main navbar -->
     <nav class="navbar navbar-expand-sm bg-dark navbar-dark">
       <a class="navbar-brand" href="/">ThingView IoT hub</a>
+      <ul class="navbar-nav mr-auto">
+        <li class="nav-item">        
+          <a class="nav-link" href="#"><span data-feather="map"></span>&nbsp;carte</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/devices"><span data-feather="list"></span>&nbsp;liste</a>
+        </li>
+      </ul>
       <ul class="navbar-nav ml-auto">
         <li class="nav-item">
+          <a class="nav-link" href="#"><span data-feather="alert-triangle"></span>&nbsp;status</a>
+        </li>
+        <li class="nav-item">
           {% if g.is_admin %}
-          <a class="nav-link" href="/user"><span data-feather="user-plus"></span>{{ session.username }}</a>
+          <a class="nav-link" href="/update_pwd"><span data-feather="user-plus"></span>&nbsp;{{ session.username }}</a>
           {% else %}
-          <a class="nav-link" href="/user"><span data-feather="user"></span>{{ session.username }}</a>
+          <a class="nav-link" href="/update_pwd"><span data-feather="user"></span>&nbsp;{{ session.username }}</a>
           {% endif %}
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="/logout"><span data-feather="log-out"></span>Logout</a>
+          <a class="nav-link" href="/logout"><span data-feather="log-out"></span>&nbsp;logout</a>
         </li>
       </ul>
     </nav>
