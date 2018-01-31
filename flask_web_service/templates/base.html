@@ -19,6 +19,7 @@
       padding:0.01em 16px; margin:20px 0; box-shadow:0 2px 4px 0 rgba(0,0,0,0.16),0 2px 10px 0 rgba(0,0,0,0.12)!important
     }
     </style>
+    {% block head %}{% endblock %}
   </head>
   <body class="blue-background">
     <!-- main navbar -->
@@ -26,7 +27,7 @@
       <a class="navbar-brand" href="/">ThingView IoT hub</a>
       <ul class="navbar-nav mr-auto">
         <li class="nav-item">        
-          <a class="nav-link" href="#"><span data-feather="map"></span>&nbsp;carte</a>
+          <a class="nav-link" href="/map"><span data-feather="map"></span>&nbsp;carte</a>
         </li>
         <li class="nav-item">
           <a class="nav-link" href="/devices"><span data-feather="list"></span>&nbsp;liste</a>
@@ -50,7 +51,7 @@
     </nav>
     <!-- content -->
     <div class="pt-3 px-4">
-      {% block content %}Content{% endblock %}
+      {% block content %}{% endblock %}
     </div>
     <script>
       feather.replace()

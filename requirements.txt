@@ -1,5 +1,6 @@
 Flask==0.12.2
 WTForms==2.1
+Flask-WTF==0.14.2
 pandas==0.14.1
 pymongo==2.9.4
 pytz

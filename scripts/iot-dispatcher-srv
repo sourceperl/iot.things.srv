@@ -9,6 +9,8 @@ import pymongo
 
 # some vars
 db = pymongo.MongoClient().iot
+# add unique key
+db.devices.create_index('device_id', unique=True)
 # add TTL for read msg (ttl = 1 year after http receive)
 db.sigfox_msg_hist.create_index('httpWhen', expireAfterSeconds=3600*24*365)
 db.sigfox_geoloc_hist.create_index('httpWhen', expireAfterSeconds=3600*24*7)

@@ -5,7 +5,7 @@ import argparse
 import datetime
 import os
 from functools import wraps
-from flask import Flask, flash, redirect, request, render_template, session, url_for, Response, g
+from flask import Flask, flash, redirect, request, render_template, session, url_for, Response, g, jsonify
 from pymongo import MongoClient
 import pandas as pd
 import numpy as np
@@ -99,16 +99,14 @@ def root():
 
 @app.route('/update_pwd', methods=['GET', 'POST'])
 @requires_auth
-def user():
+def update_pwd():
     form = UpdatePwdForm()
     success = None
     error = None
     if form.validate_on_submit():
         # get user level
-        if form.password_1.data == form.password_2.data:
-            success = 'mot de passe mis à jour.'
-        else:
-            error = 'les mots de passe sont différents.'
+        db.users.update({'user': session['username']}, {'$set': {'pwd': form.password_1.data}})
+        success = 'mise à jour effectuée.'
     return render_template('update_pwd.html', form=form, success=success, error=error)
 
 @app.route('/devices')
@@ -117,18 +115,31 @@ def devices():
     l_dev = db.devices.find()
     return render_template('devices.html', devices=l_dev)
 
+@app.route('/map')
+@requires_auth
+def map():
+    return render_template('map.html')
+
 @app.route('/cnf_device/<string:device_id>', methods=['GET', 'POST'])
 @requires_auth
 @requires_admin
 def cnf_device(device_id):
+    # read device info
     dev = db.devices.find_one({'$query': {'device_id': device_id}})
     form = CnfDeviceForm()
     success = None
     error = None
     if form.validate_on_submit():
-        # get user level
-        if form.name.data == dev['name']:
-            success = 'nouveau nom %s' % form.name.data
+        # update device info
+        d_update = dict()
+        for fieldname, value in form.data.items():
+            if fieldname in ['name']:
+                d_update[fieldname] = value
+            if dev.get('thing', '') == 'tx_pulse':
+                if fieldname in ['tx_pulse_n1', 'tx_pulse_w1','tx_pulse_n2','tx_pulse_w2']:
+                    d_update[fieldname] = value
+        db.devices.update({'device_id': device_id}, {'$set': d_update})
+        success = 'mise à jour effectuée.'
     return render_template('cnf_device.html', form=form, dev=dev, success=success, error=error)
 
 @app.route('/things/tx_pulse/<string:device_id>')
@@ -137,11 +148,12 @@ def thing_tx_pulse(device_id):
     # device data
     device = db.devices.find_one({'$query': {'device_id': device_id}})
     # convert raw data (raw to daily data)
-    df_raw = pd.DataFrame(None, columns=['vm', 'vc'], dtype='float')
+    df_raw = pd.DataFrame(None, columns=['v1', 'v2'], dtype='float')
     for record in db.tx_pulse_raw.find({'$query': {'device_id': device_id}, '$orderby': {'msg_time': -1}}).limit(400):
         df_raw.loc[record['msg_time'].replace(tzinfo=pytz.utc).astimezone(LOCAL_TZ)] = [record['pulse_1'], record['pulse_2']]
-    # add weight for vc
-    df_raw['vc'] *= 10
+    # add weights
+    df_raw['v1'] *= device.get('tx_pulse_w1', 1)
+    df_raw['v2'] *= device.get('tx_pulse_w2', 10)
     # resample:
     # - for 5h gas time: use the max rx index value for 5h00 to 5h59 time window
     df_h = df_raw.resample('H', closed='left', label='left', how=np.max).interpolate().diff()
@@ -149,6 +161,15 @@ def thing_tx_pulse(device_id):
     # web render
     return render_template('things/tx_pulse.html', device=device,
                            df_raw=df_raw[:3], df_h=df_h.sort(ascending=False)[:24], df_j=df_j.sort(ascending=False)[:7])
+
+@app.route('/things_wgs84.json')
+@requires_auth
+def things_wgs84_json():
+    l_thing = list()
+    for dev in db.devices.find():
+        l_thing.append({'device_id': dev.get('device_id', ''), 'name': dev.get('name', ''), 
+                        'lat': dev.get('lat', 0.0), 'lng': dev.get('lng', 0.0)})
+    return jsonify(l_thing)
 
 
 if __name__ == '__main__':
