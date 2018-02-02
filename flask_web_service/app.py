@@ -198,4 +198,4 @@ if __name__ == '__main__':
     # define SSL
     ssl_ctx = ('ssl.cert', 'ssl.key')
     # start flask with auto-reload
-    app.run(host=args.bind, port=args.port, ssl_context=ssl_ctx, extra_files=extra_files, debug=True)
+    app.run(host=args.bind, port=args.port, ssl_context=ssl_ctx, extra_files=extra_files, debug=args.debug)

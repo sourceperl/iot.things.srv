@@ -11,7 +11,7 @@
       <th>Réseau</th>
       <th>Type</th>
       <th>Device ID</th>
-      <th>Site</th>
+      <th>Nom</th>
       <th>Dernier message</th>
       <th>Batterie</th>
       <th>Version firmware</th>
@@ -23,30 +23,51 @@
   </thead>
   <tbody>
     {% for device in devices %}
-    <tr>
+    <tr style="height:40px;">
       {% if device.network == 'sigfox' %}
-      <td class="align-middle"><img src="/static/img/logo_sigfox.svg" title =" Sigfox " alt="  Sigfox  " width="110" height="45" /></td>
+      <td class="align-middle"><img src="/static/img/logo_sigfox.svg" title =" Sigfox " alt="  Sigfox  " width="85" height="35" /></td>
       {% elif device.network == 'ttn' %}
       <td class="align-middle"><img src="/static/img/logo_ttn.svg" title =" TTN " alt="  TTN  " width="88" height="36" /></td>
       {% else %}
-      <td class="align-middle">{{ device.network }}</td>
+      <td class="align-middle"><span data-feather="help-circle"></span></td>
       {% endif %}
       {% if device.thing == 'tx_pulse' %}
-      <td class="align-middle">Enless Tx Pulse</td>
+      <td class="align-middle">Enless télécomptage</td>
       <td class="align-middle"><a href="/things/tx_pulse/{{ device.device_id }}">{{ device.device_id }}</a></td>
+      {% elif device.thing == 'tx_temp' %}
+      <td class="align-middle">Enless thermomètre</td>
+      <td class="align-middle"><a href="/things/tx_temp/{{ device.device_id }}">{{ device.device_id }}</a></td>
       {% else %}
       <td class="align-middle"><i>inconnu</i></td>
       <td class="align-middle">{{ device.device_id }}</td>
       {% endif %}
+      {% if device.name is defined %}
       <td class="align-middle">{{ device.name }}</td>
+      {% else %}
+      <td class="align-middle"><i>n/a</i></td>
+      {%endif %}
+      {% if device.last_msg is defined %}
       <td class="align-middle">{{ device.last_msg | datetimefilter}}</td>
+      {% else %}
+      <td class="align-middle"><i>n/a</i></td>
+      {% endif %}
       {% if device.batt_ok == true %}
       <td class="align-middle alert alert-success" role="alert">OK</td>
-      {% else %}
+      {% elif device.batt_ok == false %}
       <td class="align-middle alert alert-danger" role="alert">A remplacer</td>
+      {% else %}
+      <td class="align-middle"><i>n/a</i></td>
       {%endif %}
+      {% if device.f_version is defined %}
       <td class="align-middle">{{ device.f_version }}</td>
+      {% else %}
+      <td class="align-middle"><i>n/a</i></td>
+      {%endif %}
+      {% if device.lat is defined and device.lng is defined %}
       <td class="align-middle"><a href="http://www.openstreetmap.org/?mlat={{ device.lat }}&mlon={{ device.lng }}&zoom=10" target="_blank">{{ device.lat|round(4) }}, {{ device.lng|round(4) }}</a></td>
+      {% else %}
+      <td class="align-middle"><i>n/a</i></td>
+      {%endif %}
       {% if g.is_admin %}
       <td class="align-middle"><a href="/cnf_device/{{ device.device_id }}"><span data-feather="settings"></span></a></td>
       {% endif %}
