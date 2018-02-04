@@ -115,6 +115,12 @@ def devices():
     l_dev = db.devices.find()
     return render_template('devices.html', devices=l_dev)
 
+@app.route('/devices/id/<string:device_id>')
+@requires_auth
+def devices_id(device_id):
+    l_dev = db.devices.find({'device_id': device_id})
+    return render_template('devices.html', devices=l_dev)
+
 @app.route('/map')
 @requires_auth
 def map():
@@ -161,6 +167,24 @@ def thing_tx_pulse(device_id):
     # web render
     return render_template('things/tx_pulse.html', device=device,
                            df_raw=df_raw[:3], df_h=df_h.sort(ascending=False)[:24], df_j=df_j.sort(ascending=False)[:7])
+
+@app.route('/things/tx_temp/<string:device_id>')
+@requires_auth
+def thing_tx_temp(device_id):
+    # device data
+    device = db.devices.find_one({'$query': {'device_id': device_id}})
+    # convert raw data (raw to daily data)
+    df_t_raw = pd.DataFrame(None, columns=['temperature'], dtype='float')
+    for record in db.tx_temp_raw.find({'$query': {'device_id': device_id}, '$orderby': {'msg_time': -1}}).limit(400):
+        df_t_raw.loc[record['msg_time'].replace(tzinfo=pytz.utc).astimezone(LOCAL_TZ)] = [record['temperature']]
+    # resample:
+    df_j = pd.DataFrame()
+    df_j['max'] = df_t_raw['temperature'].resample(rule='D', how=np.max)
+    df_j['avg'] = df_t_raw['temperature'].resample(rule='D', how=np.mean)
+    df_j['min'] = df_t_raw['temperature'].resample(rule='D', how=np.min)
+    # web render
+    return render_template('things/tx_temp.html', device=device,
+                           df_raw=df_t_raw[:10], df_j=df_j.sort(ascending=False)[:7])
 
 @app.route('/things_wgs84.json')
 @requires_auth

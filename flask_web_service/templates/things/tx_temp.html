@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+  <div class="h2">Données du device</div>
+  <div class="h2 flex-row-reverse">{{ device.name }} ({{ device.device_id }})</div>
+</div>
+
+<div class="values-box">
+  <h4>Dernières valeurs reçus</h4>
+  <div class="table-responsive">
+    <table class="table table-striped table-sm text-center">
+      <tr>
+        <th width="25%">Date et heure de réception</th>
+        <th width="25%">T (°C)</th>
+        <th width="25%">&nbsp;</th>
+        <th width="25%">&nbsp;</th>
+      </tr>
+      {% for index, item in df_raw.iterrows() %}
+      <tr>
+        <td>{{ index }}</td>
+        <td>{{ item['temperature'] }}</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+
+<div class="values-box">
+  <h4>Données journalières (derniers 7 jours)</h4>
+  <div class="table-responsive">
+    <table class="table table-striped table-sm text-center">
+      <tr>
+        <th width="25%">Journée</th>
+        <th width="25%">T max (°C)</th>
+        <th width="25%">T moyenne (°C)</th>
+        <th width="25%">T min (°C)</th>
+      </tr>
+      {% for index, item in df_j.iterrows() %}
+      <tr>
+        <td>{{ index }}</td>
+        <td>{{ item['max'] | round(1) }}</td>
+        <td>{{ item['avg'] | round(1) }}</td>
+        <td>{{ item['min'] | round(1) }}</td>
+      </tr>
+      {% endfor %}
+      </table>
+  </div>
+</div>
+{% endblock %}

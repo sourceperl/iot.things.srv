@@ -20,13 +20,12 @@
           // format a popup
           mkr_popup  = '<table>';
           mkr_popup += '<tr><td align="center"><b>' + js_data[i].name + '</b></td></tr>';
-          mkr_popup += '<tr><td align="center">' + js_data[i].device_id + '</td></tr>';
-          mkr_popup += '<tr><td align="center"><a href="/things/tx_pulse/' + js_data[i].device_id +'">etat</a></td></tr>';
+          mkr_popup += '<tr><td align="center">';
+          mkr_popup += '<a href="/devices/id/' + js_data[i].device_id +'">' +js_data[i].device_id +'</a>';
+          mkr_popup += '</td></tr>';
           mkr_popup += '</table>'
           // add a marker with a popup
-          L.marker([js_data[i].lat, js_data[i].lng]).addTo(map)
-          .bindPopup(mkr_popup)
-          .openPopup();
+          L.marker([js_data[i].lat, js_data[i].lng]).addTo(map).bindPopup(mkr_popup);
       }
     });
   });
