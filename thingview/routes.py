@@ -5,12 +5,13 @@ import numpy as np
 import pytz
 from thingview.forms import LoginForm, UpdatePwdForm, CnfDeviceForm
 from thingview import app, db, LOCAL_TZ
+from hashlib import md5
 
 
 # some functions
 def get_user_lvl(username, password):
     # get user access level (0: no auth, 1-3:valid)
-    u_info = db.users.find_one({'$query': {'user': username, 'pwd': password}})
+    u_info = db.users.find_one({'$query': {'user': username, 'pwd_hash': md5(password.encode()).hexdigest()}})
     if u_info:
         return u_info['level']
     else:
@@ -82,9 +83,19 @@ def update_pwd():
     error = None
     if form.validate_on_submit():
         # get user level
-        db.users.update({'user': session['username']}, {'$set': {'pwd': form.password_1.data}})
+        db.users.update({'user': session['username']}, {'$set': {'pwd_hash': md5(form.password_1.data.encode()).hexdigest()}})
         success = 'mise à jour effectuée.'
     return render_template('update_pwd.html', form=form, success=success, error=error)
+
+
+@app.route('/users', methods=['GET', 'POST'])
+@requires_auth
+@requires_admin
+def users():
+    l_users = db.users.find({'$query': {}, '$orderby': {'user': 1}})
+    success = None
+    error = None
+    return render_template('users.html', users=l_users, success=success, error=error)
 
 
 @app.route('/devices')

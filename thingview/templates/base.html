@@ -34,12 +34,17 @@
         </li>
       </ul>
       <ul class="navbar-nav ml-auto">
+        {% if g.is_admin %}
+        <li class="nav-item">
+          <a class="nav-link" href="/users"><span data-feather="users"></span>&nbsp;users</a>
+        </li>
+        {% endif %}
         <li class="nav-item">
           <a class="nav-link" href="#"><span data-feather="alert-triangle"></span>&nbsp;status</a>
         </li>
         <li class="nav-item">
           {% if g.is_admin %}
-          <a class="nav-link" href="/update_pwd"><span data-feather="user-plus"></span>&nbsp;{{ session.username }}</a>
+          <a class="nav-link" href="/update_pwd"><span data-feather="user"></span>&nbsp;{{ session.username }} (admin)</a>
           {% else %}
           <a class="nav-link" href="/update_pwd"><span data-feather="user"></span>&nbsp;{{ session.username }}</a>
           {% endif %}
