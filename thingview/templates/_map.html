@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block head %}
+<script src="/static/openlayers/2.13.1/OpenLayers.js"></script>
+<script>
+  $(document).ready(function() { 
+    // define map center and zoom on load
+    var lat            = 50.00;
+    var lon            = 3.00;
+    var zoom           = 8;
+
+    var fromProjection = new OpenLayers.Projection("EPSG:4326");   // Transform from WGS 1984
+    var toProjection   = new OpenLayers.Projection("EPSG:900913"); // to Spherical Mercator Projection
+    var map_center     = new OpenLayers.LonLat(lon, lat).transform(fromProjection, toProjection);
+    var icon_green     = new OpenLayers.Icon('/static/img/marker-green.png');
+    var icon_blue      = new OpenLayers.Icon('/static/img/marker-blue.png');
+    var icon_gold      = new OpenLayers.Icon('/static/img/marker-gold.png');
+    var icon_red       = new OpenLayers.Icon('/static/img/marker-red.png');
+    
+    // init map
+    map = new OpenLayers.Map("map", {theme: null});
+
+    // add openstreet map layer
+    var mapnik = new OpenLayers.Layer.OSM();
+    map.addLayer(mapnik);
+
+    // set the map center
+    map.setCenter(map_center, zoom);
+
+    // add a layer for the markers
+    var markers = new OpenLayers.Layer.Markers("Things");
+    map.addLayer(markers);
+
+    // load points from json file
+    $.getJSON( "/things_wgs84.json", function( js_data ) {
+      for (var i in js_data) {
+          open_layer = new OpenLayers.LonLat(js_data[i].lng, js_data[i].lat).transform(fromProjection, toProjection);
+          marker = new OpenLayers.Marker(open_layer, icon_green);
+          marker.events.register("click", marker, function() {alert('click on dev ' + js_data[i].device_id);});
+          markers.addMarker(marker);
+      }
+    });
+  });
+</script>
+{% endblock %}
+
+{% block content %}
+<div id="map" style="height:800px"></div>
+{% endblock %}

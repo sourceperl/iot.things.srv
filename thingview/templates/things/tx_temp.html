@@ -19,7 +19,7 @@
       {% for index, item in df_raw.iterrows() %}
       <tr>
         <td>{{ index }}</td>
-        <td>{{ item['temperature'] }}</td>
+        <td>{{ item['temperature'] | round(1) }}</td>
         <td>&nbsp;</td>
         <td>&nbsp;</td>
       </tr>

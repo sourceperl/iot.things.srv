@@ -1,0 +1,2 @@
+recursive-include thingview/templates *
+recursive-include thingview/static *
