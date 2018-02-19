@@ -4,9 +4,15 @@ import gunicorn
 from gunicorn.app.base import BaseApplication
 from gunicorn.six import iteritems
 from thingview import app
+from pymongo import MongoClient
 
 # define "server" HTTP header
 gunicorn.SERVER_SOFTWARE = 'ThingView IoT hub'
+
+# some vars
+db = MongoClient().iot
+# add unique key
+db.users.create_index('user', unique=True)
 
 
 class StandaloneApplication(BaseApplication):

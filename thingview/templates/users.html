@@ -4,7 +4,27 @@
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
   <div class="h2">Ajout d'un utilisateur</div>
 </div>
-
+{% if success %}
+<br>
+<div class="alert alert-success" role="alert">
+  <strong>Succès:</strong> {{ success }}
+</div>
+{% endif %}
+{% if error %}
+<br>
+<div class="alert alert-danger" role="alert">
+  <strong>Erreur:</strong> {{ error }}
+</div>
+{% endif %}
+<form class="form-inline" method="POST" action="">
+  {{ add_form.csrf_token }}
+  {{ add_form.username(class='form-control mb-2 mr-sm-2 mb-sm-0') }}
+  {{ add_form.submit(class='btn btn-success') }}
+</form>
+{% for error in add_form.username.errors %}
+<span style="color: red;">[{{ error }}]</span>
+{% endfor %}
+<br>
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
   <div class="h2">Liste des utilisateurs</div>
 </div>
@@ -14,6 +34,7 @@
     <tr>
       <th>Utilisateur</th>
       <th>Niveau</th>
+      <th>Etat du mot de passe</th>
       <th colspan="2">&nbsp;</th>
     </tr>
   </thead>
@@ -22,8 +43,13 @@
     <tr style="height:40px;">
       <td class="align-middle">{{ user.user }}</td>
       <td class="align-middle">{{ user.level | int }}</td>
-      <td class="align-middle"><input class="btn btn-warning" id="submit" name="submit" type="submit" value="Reset du mot de passe"></td>
-      <td class="align-middle"><input class="btn btn-danger" id="submit" name="submit" type="submit" value="Suppression"></td>
+      {% if user.pwd_hash == init_pwd_hash %}
+      <td class="align-middle">initial</td>
+      {% else %}
+      <td class="align-middle">utilisateur</td>
+      {% endif %}
+      <td class="align-middle"><a class="btn btn-warning" href="user/reset/{{ user._id }}" role="button">Reset du mot de passe</a></td>
+      <td class="align-middle"><a class="btn btn-danger" href="user/remove/{{ user._id }}" role="button">Suppression</a></td>
     </tr>
     {% endfor %}
   </tbody>

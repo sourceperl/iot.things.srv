@@ -2,10 +2,16 @@ from functools import wraps
 from flask import redirect, render_template, session, url_for, g, jsonify
 import pandas as pd
 import numpy as np
+import pymongo
+from bson.objectid import ObjectId
 import pytz
-from thingview.forms import LoginForm, UpdatePwdForm, CnfDeviceForm
+from thingview.forms import *
 from thingview import app, db, LOCAL_TZ
 from hashlib import md5
+
+
+# some const
+INIT_PWD_HASH = md5(b'initial').hexdigest()
 
 
 # some functions
@@ -88,14 +94,64 @@ def update_pwd():
     return render_template('update_pwd.html', form=form, success=success, error=error)
 
 
+@app.route('/user/reset/<string:user_id>', methods=['GET', 'POST'])
+@requires_auth
+@requires_admin
+def user_reset(user_id):
+    rst_form = RstUserForm()
+    success = None
+    error = None
+    # reset user with pwd as "initial"
+    if rst_form.validate_on_submit():
+        try:
+            db.users.update({'_id': ObjectId(rst_form.user_id.data)}, {'$set': {'pwd_hash': INIT_PWD_HASH}})
+        except pymongo.errors.PyMongoError:
+            error = 'changement du mot de passe impossible'
+        else:
+            return redirect(url_for('users'))
+    # define hidden field
+    rst_form.user_id.data = user_id
+    user = db.users.find_one({'$query': {'_id': ObjectId(user_id)}})
+    return render_template('user_reset.html', user=user, rst_form=rst_form, success=success, error=error)
+
+
+@app.route('/user/remove/<string:user_id>', methods=['GET', 'POST'])
+@requires_auth
+@requires_admin
+def user_remove(user_id):
+    rm_form = RmUserForm()
+    error = None
+    # remove user
+    if rm_form.validate_on_submit():
+        try:
+            db.users.remove({'_id': ObjectId(rm_form.user_id.data)})
+        except pymongo.errors.PyMongoError:
+            error = 'impossible de supprimer l\'utilisateur'
+        else:
+            return redirect(url_for('users'))
+    # define hidden field
+    rm_form.user_id.data = user_id
+    user = db.users.find_one({'$query': {'_id': ObjectId(user_id)}})
+    return render_template('user_remove.html', user=user, rm_form=rm_form, error=error)
+
+
 @app.route('/users', methods=['GET', 'POST'])
 @requires_auth
 @requires_admin
 def users():
-    l_users = db.users.find({'$query': {}, '$orderby': {'user': 1}})
+    add_form = AddUserForm()
     success = None
     error = None
-    return render_template('users.html', users=l_users, success=success, error=error)
+    # add user with pwd as "initial"
+    if add_form.validate_on_submit():
+        try:
+            db.users.insert({'user': add_form.username.data, 'pwd_hash': INIT_PWD_HASH, 'level': 1})
+        except pymongo.errors.PyMongoError:
+            error = 'ajout impossible'
+        else:
+            success = 'utilisateur ajouté'
+    l_users = db.users.find({'$query': {}, '$orderby': {'user': 1}})
+    return render_template('users.html', users=l_users, add_form=add_form, init_pwd_hash=INIT_PWD_HASH, success=success, error=error)
 
 
 @app.route('/devices')

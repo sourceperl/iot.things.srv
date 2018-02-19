@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, IntegerField, SubmitField
+from wtforms import StringField, PasswordField, IntegerField, SubmitField, HiddenField
 from wtforms.validators import DataRequired, length, EqualTo
 
 
@@ -26,6 +26,19 @@ class LoginForm(StripFlaskForm):
     username = StringField('Utilisateur', validators=[DataRequired(), length(max=16, min=3)])
     password = PasswordField('Mot de passe', validators=[DataRequired(), length(max=64, min=3)])
     submit = SubmitField('Valider')
+
+
+class RstUserForm(StripFlaskForm):
+    user_id = HiddenField()
+    submit = SubmitField('Reset')
+
+class RmUserForm(StripFlaskForm):
+    user_id = HiddenField()
+    submit = SubmitField('Suppression')
+
+class AddUserForm(StripFlaskForm):
+    username = StringField('Utilisateur', validators=[DataRequired(), length(max=16, min=3)], render_kw={'placeholder': 'Utilisateur'})
+    submit = SubmitField('Ajouter')
 
 
 class UpdatePwdForm(StripFlaskForm):
