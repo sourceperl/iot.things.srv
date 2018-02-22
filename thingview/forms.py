@@ -1,6 +1,7 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, IntegerField, SubmitField, HiddenField
-from wtforms.validators import DataRequired, length, EqualTo
+from wtforms.validators import DataRequired, length, EqualTo, ValidationError
+import re
 
 
 # some class
@@ -21,6 +22,11 @@ def my_strip_filter(value):
     return value
 
 
+def valid_username(form, field):
+    if not re.match("^[a-zA-Z0-9_]*$", field.data):
+        raise ValidationError('nom d\' utilisateur invalide')
+
+
 # FlaskForm define
 class LoginForm(StripFlaskForm):
     username = StringField('Utilisateur', validators=[DataRequired(), length(max=16, min=3)])
@@ -32,12 +38,15 @@ class RstUserForm(StripFlaskForm):
     user_id = HiddenField()
     submit = SubmitField('Reset')
 
+
 class RmUserForm(StripFlaskForm):
     user_id = HiddenField()
     submit = SubmitField('Suppression')
 
+
 class AddUserForm(StripFlaskForm):
-    username = StringField('Utilisateur', validators=[DataRequired(), length(max=16, min=3)], render_kw={'placeholder': 'Utilisateur'})
+    username = StringField('Utilisateur', validators=[DataRequired(), length(max=16, min=3), valid_username], 
+                           render_kw={'placeholder': 'Utilisateur'})
     submit = SubmitField('Ajouter')
 
 
