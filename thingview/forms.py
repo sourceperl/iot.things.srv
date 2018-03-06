@@ -59,7 +59,7 @@ class UpdatePwdForm(StripFlaskForm):
 
 
 class CnfDeviceForm(StripFlaskForm):
-    name = StringField('Nom', validators=[DataRequired(), length(max=16)])
+    name = StringField('Nom', validators=[DataRequired(), length(max=32)])
     tx_pulse_n1 = StringField('Nom de la voie 1', default='vm', validators=[])
     tx_pulse_w1 = IntegerField('Poids de la voie 1', default=1, validators=[])
     tx_pulse_n2 = StringField('Nom de la voie 2', default='vc', validators=[])

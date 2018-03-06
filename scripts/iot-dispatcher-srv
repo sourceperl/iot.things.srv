@@ -43,7 +43,7 @@ def job_dispatch_sigfox_msg():
                 db.tx_pulse_raw.update({'device_id': dev_id, 'msg_time': msg_dt}, d_tx, upsert=True, multi=False)
                 # update device status
                 fv_b_status = int(d_c_data.get('Firmware_Version_Battery_status_byte', 0x00))
-                battery_ok = bool(fv_b_status and 0x01)
+                battery_ok = bool(fv_b_status & 0x01)
                 firmware_version = fv_b_status >> 4
                 db.devices.update({'device_id': dev_id},
                                   {'$set': {'network': 'sigfox', 'thing': 'tx_pulse', 'device_id': dev_id,
