@@ -18,8 +18,8 @@
       {% for index, item in df_raw.iterrows() %}
       <tr>
         <td>{{ index }}</td>
-        <td>{{ '{0:,d}'.format(item.v1 | int).replace(',', ' ') }}</td>
-        <td>{{ '{0:,d}'.format(item.v2 | int).replace(',', ' ') }}</td>
+        <td>{{ '{0:,d}'.format(item.v1 | round | int).replace(',', ' ') }}</td>
+        <td>{{ '{0:,d}'.format(item.v2 | round | int).replace(',', ' ') }}</td>
       </tr>
       {% endfor %}
     </table>
@@ -38,8 +38,8 @@
       {% for index, item in df_j.iterrows() %}
       <tr>
         <td>{{ index }}</td>
-        <td>{{ '{0:,d}'.format(item.v1 | int).replace(',', ' ') }}</td>
-        <td>{{ '{0:,d}'.format(item.v2 | int).replace(',', ' ') }}</td>
+        <td>{{ '{0:,d}'.format(item.v1 | round | int).replace(',', ' ') }}</td>
+        <td>{{ '{0:,d}'.format(item.v2 | round | int).replace(',', ' ') }}</td>
       </tr>
       {% endfor %}
       </table>
@@ -58,8 +58,8 @@
       {% for index, item in df_h.iterrows() %}
       <tr>
         <td>{{ index }}</td>
-        <td>{{ '{0:,d}'.format(item.v1 | int).replace(',', ' ') }}</td>
-        <td>{{ '{0:,d}'.format(item.v2 | int).replace(',', ' ') }}</td>
+        <td>{{ '{0:,d}'.format(item.v1 | round | int).replace(',', ' ') }}</td>
+        <td>{{ '{0:,d}'.format(item.v2 | round | int).replace(',', ' ') }}</td>
       </tr>
       {% endfor %}
       </table>

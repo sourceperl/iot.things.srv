@@ -211,8 +211,11 @@ def thing_tx_pulse(device_id):
     df_raw['v1'] *= device.get('tx_pulse_w1', 1)
     df_raw['v2'] *= device.get('tx_pulse_w2', 10)
     # resample:
-    # - for 5h gas time: use the max rx index value for 5h00 to 5h59 time window
-    df_h = df_raw.resample('H', closed='left', label='left', how=np.max).interpolate().diff()
+    # raw index -> minutes index (interpolate other sample) -> hourly index (max one for an hour)
+    df_h_index = df_raw.resample('1min').interpolate().resample('H', how=np.max)
+    # index -> hourly volume
+    df_h = df_h_index.diff()
+    # hourly volume -> daily volume (day start at 6h)
     df_j = df_h.resample(rule='24H', closed='left', label='left', base=6, how=np.sum)
     # web render
     return render_template('things/tx_pulse.html', device=device,
