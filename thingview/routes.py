@@ -205,8 +205,13 @@ def thing_tx_pulse(device_id):
     # convert raw data (raw to daily data)
     df_raw = pd.DataFrame(None, columns=['v1', 'v2'], dtype='float')
     for record in db.tx_pulse_raw.find({'$query': {'device_id': device_id}, '$orderby': {'msg_time': -1}}).limit(400):
-        df_raw.loc[record['msg_time'].replace(tzinfo=pytz.utc).astimezone(LOCAL_TZ)] = [record['pulse_1'],
-                                                                                        record['pulse_2']]
+        # avoid pytz.exceptions.AmbiguousTimeError for UTC value record in GMT+2 -> GMT+1 change
+        # occur in interval 3h -> 2h on summer to winter time change (just ignore it)
+        try:
+            df_raw.loc[record['msg_time'].replace(tzinfo=pytz.utc).astimezone(LOCAL_TZ)] = [record['pulse_1'],
+                                                                                            record['pulse_2']]
+        except ValueError:
+            pass
     # add weights
     df_raw['v1'] *= device.get('tx_pulse_w1', 1)
     df_raw['v2'] *= device.get('tx_pulse_w2', 10)
@@ -230,7 +235,12 @@ def thing_tx_temp(device_id):
     # convert raw data (raw to daily data)
     df_t_raw = pd.DataFrame(None, columns=['temperature'], dtype='float')
     for record in db.tx_temp_raw.find({'$query': {'device_id': device_id}, '$orderby': {'msg_time': -1}}).limit(400):
-        df_t_raw.loc[record['msg_time'].replace(tzinfo=pytz.utc).astimezone(LOCAL_TZ)] = [record['temperature']]
+        # avoid pytz.exceptions.AmbiguousTimeError for UTC value record in GMT+2 -> GMT+1 change
+        # occur in interval 3h -> 2h on summer to winter time change (just ignore it)
+        try:
+            df_t_raw.loc[record['msg_time'].replace(tzinfo=pytz.utc).astimezone(LOCAL_TZ)] = [record['temperature']]
+        except ValueError:
+            pass
     # resample:
     df_j = pd.DataFrame()
     df_j['max'] = df_t_raw['temperature'].resample(rule='D', how=np.max)
